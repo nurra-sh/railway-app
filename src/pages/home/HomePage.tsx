@@ -3,11 +3,18 @@ import classes from './HomePage.module.css';
 import type { FormProps, InputNumberProps } from 'antd';
 import { Button, DatePicker, Flex, Form, InputNumber, Radio, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
+import useGetStationsKeyValuePairs from '../../modules/stations/queries/useGetStationsKeyValuePairs';
+import { useEffect } from 'react';
+import useGetTrainsBetweenStations from '../../modules/trains/queries/useGetTrainsBetweenStations';
+import { useSearchParams } from 'react-router';
 
-
-const onFinish: FormProps<SearchFormValues>['onFinish'] = (values) => {
-    console.log('Success:', values);
-};
+interface SearchFormValues {
+    tripType: 'roundTrip' | 'oneWay';
+    numberOfPassengers: number;
+    departure: string;
+    arrival: string;
+    date: Dayjs | [Dayjs, Dayjs] | null;
+}
 
 const onFinishFailed: FormProps<SearchFormValues>['onFinishFailed'] = (errorInfo) => {
     console.log('Failed:', errorInfo);
@@ -25,23 +32,45 @@ const sharedProps = {
     style: { width: 120 },
 };
 
-const stylesObject: FormProps['styles'] = {
+const stylesObject: FormProps<SearchFormValues>['styles'] = {
     label: {
         fontWeight: 700,
         fontSize: '1.1rem'
     },
 };
 
-interface SearchFormValues {
-    tripType: 'roundTrip' | 'oneWay';
-    numberOfPassengers: number;
-    departure: string;
-    arrival: string;
-    date: Dayjs | [Dayjs, Dayjs] | null;
-}
+
 
 export default function HomePage() {
-    const [form] = Form.useForm<SearchFormValues>()
+    const [searchParams, setSearchParams] = useSearchParams() // состояние - state
+    const [form] = Form.useForm<SearchFormValues>();
+
+    const { data: stationsKeyValuePairsData, isLoading } = useGetStationsKeyValuePairs();
+
+    const stationsKeyValuePairs = stationsKeyValuePairsData?.data || [];
+
+    const departure = searchParams.get('departure')
+    const arrival = searchParams.get('arrival')
+
+    const { data } = useGetTrainsBetweenStations(departure ?? '', arrival ?? '')
+
+    const stationsOptions = stationsKeyValuePairs.map(([code, name]) => ({ label: name, value: code }));
+
+    useEffect(() => {
+        if (stationsOptions.length > 0) {
+            form.setFieldsValue({
+                departure: 'CNH',
+                arrival: 'KPI',
+            });
+        }
+    }, [stationsOptions]);
+
+    const onFinish: FormProps<SearchFormValues>['onFinish'] = (values) => {
+        console.log('Success:', values);
+        if (values.departure && values.arrival) {
+            setSearchParams({ departure: values.departure, arrival: values.arrival });
+        }
+    };
 
     return (
         <div className={classes.homePageContainer}>
@@ -60,8 +89,8 @@ export default function HomePage() {
                 initialValues={{
                     tripType: 'roundTrip',
                     numberOfPassengers: 1,
-                    departure: 'New Delhi - NDLS',
-                    arrival: 'Lucknow Junction - LJN',
+                    // departure: stationsOptions?.[0]?.value,
+                    // arrival: stationsOptions?.[1]?.value,
 
                 }}
             >
@@ -80,11 +109,11 @@ export default function HomePage() {
 
                 <Flex gap='medium'>
                     <Form.Item name="departure" rules={[{ required: true, message: 'Please select a departure station' }]} style={{ flex: 1 }} label="Departure">
-                        <Select options={[{ label: 'New Delhi - NDLS', value: 'New Delhi - NDLS' }, { label: 'Lucknow Junction - LJN', value: 'Lucknow Junction - LJN' }]} />
+                        <Select placeholder={isLoading ? 'Loading...' : 'Select a departure station'} options={stationsOptions} />
                     </Form.Item>
 
                     <Form.Item name="arrival" rules={[{ required: true, message: 'Please select a arrival station' }]} style={{ flex: 1 }} label="Arrival">
-                        <Select options={[{ label: 'New Delhi - NDLS', value: 'New Delhi - NDLS' }, { label: 'Lucknow Junction - LJN', value: 'Lucknow Junction - LJN' }]} />
+                        <Select placeholder={isLoading ? 'Loading...' : 'Select a departure station'} options={stationsOptions} />
                     </Form.Item>
                 </Flex>
 
@@ -109,6 +138,10 @@ export default function HomePage() {
                     </Button>
                 </Form.Item>
             </Form>
+
+            <Flex style={{ marginTop: '50px' }} vertical gap="medium">
+                <Title level={2}>Available Trains</Title>
+            </Flex>
         </div>
     )
 }
