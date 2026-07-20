@@ -1,5 +1,5 @@
 export const STATIONS_QUERY_PREFIX = 'stations';
 
 export const STATIONS_QUERY_KEYS = {
-  getKeyValuePairs: [STATIONS_QUERY_PREFIX, 'getKeyValuePairs'],
+  getKeyValuePairs: (lat: number, lon: number) => [STATIONS_QUERY_PREFIX, 'getKeyValuePairs', lat, lon],
 } as const;

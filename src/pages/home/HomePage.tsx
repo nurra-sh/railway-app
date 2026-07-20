@@ -4,9 +4,10 @@ import type { FormProps, InputNumberProps } from 'antd';
 import { Button, DatePicker, Flex, Form, InputNumber, Radio, Select } from 'antd';
 import type { Dayjs } from 'dayjs';
 import useGetStationsKeyValuePairs from '../../modules/stations/queries/useGetStationsKeyValuePairs';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import useGetTrainsBetweenStations from '../../modules/trains/queries/useGetTrainsBetweenStations';
 import { useSearchParams } from 'react-router';
+import TrainCard from '../../modules/trains/ui/TrainCard';
 
 interface SearchFormValues {
     tripType: 'roundTrip' | 'oneWay';
@@ -44,26 +45,40 @@ const stylesObject: FormProps<SearchFormValues>['styles'] = {
 export default function HomePage() {
     const [searchParams, setSearchParams] = useSearchParams() // состояние - state
     const [form] = Form.useForm<SearchFormValues>();
+    const [geolocation, setGeolocation] = useState<{ latitude: number, longitude: number } | null>(null);
 
-    const { data: stationsKeyValuePairsData, isLoading } = useGetStationsKeyValuePairs();
+    const { data: nearestStationsResponse, isLoading } = useGetStationsKeyValuePairs(geolocation?.latitude ?? 0, geolocation?.longitude ?? 0);
+    const { data: moscowStationsResponse, isLoading: isMoscowStationsLoading } = useGetStationsKeyValuePairs(55.751244, 37.618423);
 
-    const stationsKeyValuePairs = stationsKeyValuePairsData?.data || [];
+    const moscowStationsOptions = moscowStationsResponse?.stations.map((s) => ({ label: s.title, value: s.code })) ?? [];
 
     const departure = searchParams.get('departure')
     const arrival = searchParams.get('arrival')
 
-    const { data } = useGetTrainsBetweenStations(departure ?? '', arrival ?? '')
+    const { data: trainsData, isLoading: isTrainsLoading } = useGetTrainsBetweenStations(departure ?? '', arrival ?? '');
+    const trains = trainsData?.segments ?? [];
 
-    const stationsOptions = stationsKeyValuePairs.map(([code, name]) => ({ label: name, value: code }));
+    const stationsOptions =
+        nearestStationsResponse?.stations.map((s) => ({ label: s.title, value: s.code })) ?? [];
 
     useEffect(() => {
-        if (stationsOptions.length > 0) {
+        if (stationsOptions.length > 0 && moscowStationsOptions.length > 0) {
             form.setFieldsValue({
-                departure: 'CNH',
-                arrival: 'KPI',
+                departure: stationsOptions?.[0]?.value,
+                arrival: moscowStationsOptions?.[1]?.value,
             });
         }
-    }, [stationsOptions]);
+    }, [stationsOptions, moscowStationsOptions]);
+
+    useEffect(() => {
+        window.navigator.geolocation.getCurrentPosition((position) => {
+            console.log(position)
+            setGeolocation({
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+            });
+        });
+    }, [])
 
     const onFinish: FormProps<SearchFormValues>['onFinish'] = (values) => {
         console.log('Success:', values);
@@ -113,7 +128,7 @@ export default function HomePage() {
                     </Form.Item>
 
                     <Form.Item name="arrival" rules={[{ required: true, message: 'Please select a arrival station' }]} style={{ flex: 1 }} label="Arrival">
-                        <Select placeholder={isLoading ? 'Loading...' : 'Select a departure station'} options={stationsOptions} />
+                        <Select placeholder={isMoscowStationsLoading ? 'Loading...' : 'Select a departure station'} options={moscowStationsOptions} />
                     </Form.Item>
                 </Flex>
 
@@ -141,6 +156,10 @@ export default function HomePage() {
 
             <Flex style={{ marginTop: '50px' }} vertical gap="medium">
                 <Title level={2}>Available Trains</Title>
+
+                {isTrainsLoading
+                    ? 'Loading...'
+                    : trains.map((train, index) => <TrainCard key={index} segment={train} />)}
             </Flex>
         </div>
     )

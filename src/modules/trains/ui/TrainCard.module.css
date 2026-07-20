@@ -1,0 +1,22 @@
+.trainTitle {
+    font-size: 1rem !important;
+    color: #2f54eb !important;
+  }
+  
+  .trainSchedule {
+    display: grid;
+    grid-template-columns: 2fr 1fr 2fr;
+    gap: 10px;
+    align-items: center;
+    font-weight: 600;
+  }
+  
+  .trainScheduleDuration {
+    justify-self: center;
+    color: grey;
+    font-weight: 600;
+  }
+  
+  .trainScheduleArrival {
+    text-align: right;
+  }
