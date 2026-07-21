@@ -6,8 +6,11 @@ import type { Dayjs } from 'dayjs';
 import useGetStationsKeyValuePairs from '../../modules/stations/queries/useGetStationsKeyValuePairs';
 import { useEffect, useState } from 'react';
 import useGetTrainsBetweenStations from '../../modules/trains/queries/useGetTrainsBetweenStations';
-import { useSearchParams } from 'react-router';
+import { useNavigate, useSearchParams } from 'react-router';
 import TrainCard from '../../modules/trains/ui/TrainCard';
+import dayjs from 'dayjs';
+import type { TrainScheduleSegment } from '../../modules/trains/api/trains.api.types';
+import useTrainsStore from '../../modules/trains/store/useTrainsStore';
 
 interface SearchFormValues {
     tripType: 'roundTrip' | 'oneWay';
@@ -43,19 +46,23 @@ const stylesObject: FormProps<SearchFormValues>['styles'] = {
 
 
 export default function HomePage() {
+    const navigate = useNavigate()
     const [searchParams, setSearchParams] = useSearchParams() // состояние - state
     const [form] = Form.useForm<SearchFormValues>();
     const [geolocation, setGeolocation] = useState<{ latitude: number, longitude: number } | null>(null);
+    const { selectTrain, selectInfo } = useTrainsStore()
 
     const { data: nearestStationsResponse, isLoading } = useGetStationsKeyValuePairs(geolocation?.latitude ?? 0, geolocation?.longitude ?? 0);
     const { data: moscowStationsResponse, isLoading: isMoscowStationsLoading } = useGetStationsKeyValuePairs(55.751244, 37.618423);
 
     const moscowStationsOptions = moscowStationsResponse?.stations.map((s) => ({ label: s.title, value: s.code })) ?? [];
 
-    const departure = searchParams.get('departure')
-    const arrival = searchParams.get('arrival')
+    const departureParam = searchParams.get('departure')
+    const arrivalParam = searchParams.get('arrival')
+    const dateParam = searchParams.get('date')
+    const numberOfPassengersParam = searchParams.get('numberOfPassengers')
 
-    const { data: trainsData, isLoading: isTrainsLoading } = useGetTrainsBetweenStations(departure ?? '', arrival ?? '');
+    const { data: trainsData, isLoading: isTrainsLoading } = useGetTrainsBetweenStations(departureParam ?? '', arrivalParam ?? '', dateParam ?? '');
     const trains = trainsData?.segments ?? [];
 
     const stationsOptions =
@@ -64,8 +71,10 @@ export default function HomePage() {
     useEffect(() => {
         if (stationsOptions.length > 0 && moscowStationsOptions.length > 0) {
             form.setFieldsValue({
-                departure: stationsOptions?.[0]?.value,
-                arrival: moscowStationsOptions?.[1]?.value,
+                departure: departureParam || stationsOptions?.[0]?.value,
+                arrival: arrivalParam || moscowStationsOptions?.[1]?.value,
+                date: dateParam ? dayjs(dateParam) : null,
+                numberOfPassengers: numberOfPassengersParam ? Number(numberOfPassengersParam) : 1,
             });
         }
     }, [stationsOptions, moscowStationsOptions]);
@@ -82,10 +91,31 @@ export default function HomePage() {
 
     const onFinish: FormProps<SearchFormValues>['onFinish'] = (values) => {
         console.log('Success:', values);
-        if (values.departure && values.arrival) {
-            setSearchParams({ departure: values.departure, arrival: values.arrival });
+        if (values.departure && values.arrival && values.date) {
+            setSearchParams({
+                departure: values.departure,
+                arrival: values.arrival,
+                date: dayjs(values.date as Dayjs).format('YYYY-MM-DD'),
+                numberOfPassengers: values.numberOfPassengers.toString(),
+            });
         }
     };
+
+    function onClearFilters() {
+        setSearchParams({});
+        form.resetFields();
+    }
+
+    function onBuyTickets(train: TrainScheduleSegment) {
+        selectTrain(train)
+        selectInfo({
+            numberOfPassengers: form.getFieldValue('numberOfPassengers'),
+            departure: form.getFieldValue('departure'),
+            arrival: form.getFieldValue('arrival'),
+            date: (form.getFieldValue('date') as Dayjs).format('YYYY-MM-DD'),
+          });
+          navigate('/buy-tickets')
+    }
 
     return (
         <div className={classes.homePageContainer}>
@@ -102,7 +132,7 @@ export default function HomePage() {
                 styles={stylesObject}
                 className={classes.searchForm}
                 initialValues={{
-                    tripType: 'roundTrip',
+                    tripType: 'oneWay',
                     numberOfPassengers: 1,
                     // departure: stationsOptions?.[0]?.value,
                     // arrival: stationsOptions?.[1]?.value,
@@ -112,7 +142,7 @@ export default function HomePage() {
                 <Flex gap="medium" justify="space-between" align='center'>
                     <Form.Item name='tripType' rules={[{ required: true, message: 'Please select a trip type' }]}>
                         <Radio.Group size='large'>
-                            <Radio.Button value="roundTrip"> Round trip </Radio.Button>
+                            {/* <Radio.Button value="roundTrip"> Round trip </Radio.Button> */}
                             <Radio.Button value="oneWay">One-way</Radio.Button>
                         </Radio.Group>
                     </Form.Item>
@@ -155,11 +185,16 @@ export default function HomePage() {
             </Form>
 
             <Flex style={{ marginTop: '50px' }} vertical gap="medium">
+                <Button onClick={onClearFilters} size="middle" block type="default" style={{ width: 'fit-content' }} >
+                    Clear
+                </Button>
                 <Title level={2}>Available Trains</Title>
+
+                {trains.length === 0 && <div>No trains found</div>}
 
                 {isTrainsLoading
                     ? 'Loading...'
-                    : trains.map((train, index) => <TrainCard key={index} segment={train} />)}
+                    : trains.map((train, index) => <TrainCard key={index} segment={train} onBuyTickets={() => onBuyTickets(train)} />)}
             </Flex>
         </div>
     )
