@@ -1,0 +1,19 @@
+.pageContainer {
+    padding: 60px 20px;
+  }
+  
+  .successImage {
+    margin-bottom: 24px;
+    object-fit: contain;
+  }
+  
+  .congratsTitle {
+    color: #2eb872 !important;
+    margin-bottom: 12px !important;
+  }
+  
+  .successText {
+    color: #2eb872 !important;
+    margin-top: 0 !important;
+    font-weight: 500 !important;
+  }

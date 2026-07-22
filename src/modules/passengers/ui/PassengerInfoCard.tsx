@@ -1,5 +1,4 @@
 import { Card, DatePicker, Form, Input } from "antd";
-import { type FormProps } from "antd/es/form/Form";
 import classes from './passengers.module.css';
 import { PatternFormat } from "react-number-format";
 import type { Dayjs } from "dayjs";
@@ -13,13 +12,6 @@ export interface PassengerInfoFormValues {
 
 export default function PassengerInfoCard({ index }: { index: number }) {
     const baseName: (string | number)[] = ['passengers', index];
-
-    function onFinish(values: PassengerInfoFormValues) {
-        console.log('Success:', values)
-    }
-    const onFinishFailed: FormProps<PassengerInfoFormValues>['onFinishFailed'] = (errorInfo) => {
-        console.log('Failed:', errorInfo);
-    };
 
     return (
         <Card size="small" title={`Passenger Info ${index + 1}`}>
