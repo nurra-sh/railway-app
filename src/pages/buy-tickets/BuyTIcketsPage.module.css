@@ -3,3 +3,59 @@
     font-size: 2rem !important;
     color: #9254de !important;
 }
+
+.foodTitle {
+    font-size: 1.2rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 0px !important;
+}
+
+.foodPrice {
+    font-size: 0.8rem !important;
+    font-weight: 700 !important;
+}
+
+.foodCard {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    text-align: center;
+}
+
+.foodImage {
+    object-fit: cover;
+    object-position: center;
+}
+
+.offersCard {
+    margin: 50px 0px;
+    border: 3px dashed #9254de;
+    padding: 26px 24px;
+    border-radius: 10px;
+}
+
+.offersTitle {
+    font-size: 1.5rem !important;
+    margin-bottom: 20px !important;
+    color: #9254de !important;
+}
+
+.offersText {
+    font-size: 1.2rem !important;
+    margin-bottom: 0px !important;
+}
+
+.offersButton {
+    font-size: 1rem !important;
+    font-weight: 700;
+}
+
+.codeTitle {
+    font-size: 1.2rem !important;
+}
+
+.extraBaggageTitle {
+    font-size: 1.2rem !important;
+}
